@@ -1,4 +1,5 @@
 import "./globals.css";
+import AuthProvider from "./components/AuthProvider";
 
 export const metadata = {
   title: "CultureCode Drop Radar | Real-Time TCG Hype Tracker",
@@ -22,7 +23,9 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

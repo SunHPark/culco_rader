@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession, signIn, signOut } from "next-auth/react";
 
 const getHypeColor = (score) => {
   if (score >= 90) return { bg: "#fee2e2", text: "#dc2626", label: "🔥 BLAZING" };
@@ -30,7 +31,197 @@ const getDaysUntil = (dateStr) => {
   return `D-${diff}`;
 };
 
+// Sign Up Modal Component
+function SignUpModal({ onClose, onSuccess }) {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleXLogin = async () => {
+    setIsLoading(true);
+    // NextAuth의 signIn 함수 호출
+    await signIn("twitter", { callbackUrl: "/" });
+  };
+
+  return (
+    <div style={authStyles.overlay} onClick={onClose}>
+      <div style={authStyles.container} onClick={(e) => e.stopPropagation()}>
+        <button style={authStyles.closeButton} onClick={onClose}>×</button>
+        
+        <div style={authStyles.content}>
+          {/* Logo */}
+          <div style={authStyles.logoSection}>
+            <span style={authStyles.logoIcon}>◈</span>
+            <h2 style={authStyles.logoText}>CultureCode</h2>
+          </div>
+          
+          {/* Title */}
+          <div style={authStyles.titleSection}>
+            <h3 style={authStyles.title}>Get Drop Alerts</h3>
+            <p style={authStyles.subtitle}>
+              Sign up to receive notifications when your tracked cards spike or new drops are announced.
+            </p>
+          </div>
+          
+          {/* Benefits */}
+          <div style={authStyles.benefits}>
+            <div style={authStyles.benefitItem}>
+              <span style={authStyles.benefitIcon}>🔔</span>
+              <span style={authStyles.benefitText}>Real-time price alerts</span>
+            </div>
+            <div style={authStyles.benefitItem}>
+              <span style={authStyles.benefitIcon}>📅</span>
+              <span style={authStyles.benefitText}>Drop reminders before release</span>
+            </div>
+            <div style={authStyles.benefitItem}>
+              <span style={authStyles.benefitIcon}>📈</span>
+              <span style={authStyles.benefitText}>Personalized hype tracking</span>
+            </div>
+          </div>
+          
+          {/* X Login Button */}
+          <button
+            onClick={handleXLogin}
+            disabled={isLoading}
+            style={{
+              ...authStyles.xButton,
+              opacity: isLoading ? 0.7 : 1,
+            }}
+          >
+            {isLoading ? (
+              <span style={authStyles.loadingSpinner}></span>
+            ) : (
+              <>
+                <svg style={authStyles.xLogo} viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+                Continue with X
+              </>
+            )}
+          </button>
+          
+          {/* Terms */}
+          <p style={authStyles.terms}>
+            By continuing, you agree to our{" "}
+            <a href="#" style={authStyles.termsLink}>Terms of Service</a>
+            {" "}and{" "}
+            <a href="#" style={authStyles.termsLink}>Privacy Policy</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Card Detail Modal Component
+function CardDetailModal({ card, onClose }) {
+  if (!card) return null;
+  
+  const hypeStyle = getHypeColor(card.hypeScore);
+  
+  return (
+    <div style={modalStyles.overlay} onClick={onClose}>
+      <div style={modalStyles.container} onClick={(e) => e.stopPropagation()}>
+        <button style={modalStyles.closeButton} onClick={onClose}>×</button>
+        
+        <div style={modalStyles.content}>
+          {/* Left: Card Image */}
+          <div style={modalStyles.imageSection}>
+            <img
+              src={card.image}
+              alt={card.name}
+              style={modalStyles.cardImage}
+              onError={(e) => { e.target.src = "https://via.placeholder.com/300x420/f5f5f5/999?text=Card"; }}
+            />
+          </div>
+          
+          {/* Right: Card Info */}
+          <div style={modalStyles.infoSection}>
+            <div style={modalStyles.header}>
+              <h2 style={modalStyles.cardName}>{card.name}</h2>
+              <p style={modalStyles.setName}>{card.set}</p>
+              {card.rarity && <span style={modalStyles.rarity}>{card.rarity}</span>}
+            </div>
+            
+            {/* Hype Score */}
+            <div style={modalStyles.hypeSection}>
+              <div style={modalStyles.hypeTitle}>Hype Score</div>
+              <div style={modalStyles.hypeScoreContainer}>
+                <div
+                  style={{
+                    ...modalStyles.hypeScoreBig,
+                    backgroundColor: hypeStyle.bg,
+                    color: hypeStyle.text,
+                  }}
+                >
+                  {card.hypeScore}
+                </div>
+                <span style={{ ...modalStyles.hypeLabel, color: hypeStyle.text }}>
+                  {hypeStyle.label}
+                </span>
+              </div>
+            </div>
+            
+            {/* Price Info */}
+            <div style={modalStyles.priceSection}>
+              <div style={modalStyles.priceTitle}>Market Price</div>
+              <div style={modalStyles.priceRow}>
+                <span style={modalStyles.priceValue}>${card.price}</span>
+                <span style={modalStyles.priceChange}>{card.priceChange}</span>
+              </div>
+              <div style={modalStyles.priceSubtext}>Based on recent sales</div>
+            </div>
+            
+            {/* Why Trending */}
+            <div style={modalStyles.reasonSection}>
+              <div style={modalStyles.reasonTitle}>📈 Why It's Trending</div>
+              <p style={modalStyles.reasonText}>{card.reason}</p>
+            </div>
+            
+            {/* Sources */}
+            <div style={modalStyles.sourcesSection}>
+              <div style={modalStyles.sourcesTitle}>Sources</div>
+              <div style={modalStyles.sourcesList}>
+                {card.sources?.map((src, i) => (
+                  <a
+                    key={i}
+                    href={src.url}
+                    style={modalStyles.sourceLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {src.name} ↗
+                  </a>
+                ))}
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div style={modalStyles.actions}>
+              <a
+                href={`https://www.tcgplayer.com/search/pokemon/product?q=${encodeURIComponent(card.name)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={modalStyles.buyButton}
+              >
+                View on TCGPlayer
+              </a>
+              <a
+                href={`https://www.cardmarket.com/en/Pokemon/Products/Search?searchString=${encodeURIComponent(card.name)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={modalStyles.secondaryButton}
+              >
+                View on Cardmarket
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
+  const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState("hype");
   const [keyword, setKeyword] = useState("");
   const [savedKeywords, setSavedKeywords] = useState([]);
@@ -38,6 +229,12 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [hypeCards, setHypeCards] = useState([]);
   const [drops, setDrops] = useState([]);
+  const [selectedCard, setSelectedCard] = useState(null);
+  const [showSignUp, setShowSignUp] = useState(false);
+  const [pendingNotifyId, setPendingNotifyId] = useState(null);
+
+  // session에서 user 정보 가져오기
+  const user = session?.user;
 
   useEffect(() => {
     const loadData = async () => {
@@ -83,11 +280,35 @@ export default function Home() {
   };
 
   const toggleNotify = (dropId) => {
+    // 로그인 안 된 경우 SignUp 모달 표시
+    if (!user) {
+      setPendingNotifyId(dropId);
+      setShowSignUp(true);
+      return;
+    }
+    
     const newSet = new Set(notifiedDrops);
     if (newSet.has(dropId)) newSet.delete(dropId);
     else newSet.add(dropId);
     setNotifiedDrops(newSet);
     localStorage.setItem("culturecode_notified", JSON.stringify([...newSet]));
+  };
+
+  const handleSignUpSuccess = (newUser) => {
+    setShowSignUp(false);
+    
+    // 대기 중인 알림이 있으면 처리
+    if (pendingNotifyId) {
+      const newSet = new Set(notifiedDrops);
+      newSet.add(pendingNotifyId);
+      setNotifiedDrops(newSet);
+      localStorage.setItem("culturecode_notified", JSON.stringify([...newSet]));
+      setPendingNotifyId(null);
+    }
+  };
+
+  const handleLogout = () => {
+    signOut({ callbackUrl: "/" });
   };
 
   if (isLoading) {
@@ -110,9 +331,29 @@ export default function Home() {
             <p style={styles.tagline}>Drop Radar</p>
           </div>
         </div>
-        <div style={styles.liveIndicator}>
-          <span style={styles.liveDot}></span>
-          <span style={styles.liveText}>LIVE</span>
+        <div style={styles.headerRight}>
+          {user ? (
+            <div style={styles.userSection}>
+              <img 
+                src={user.image} 
+                alt={user.name} 
+                style={styles.userAvatar}
+                onError={(e) => { e.target.src = "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png"; }}
+              />
+              <span style={styles.userName}>@{user.username || user.name}</span>
+              <button onClick={handleLogout} style={styles.logoutButton}>
+                Logout
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setShowSignUp(true)} style={styles.signInButton}>
+              Sign In
+            </button>
+          )}
+          <div style={styles.liveIndicator}>
+            <span style={styles.liveDot}></span>
+            <span style={styles.liveText}>LIVE</span>
+          </div>
         </div>
       </header>
 
@@ -174,7 +415,12 @@ export default function Home() {
             {hypeCards.map((card, index) => {
               const hypeStyle = getHypeColor(card.hypeScore);
               return (
-                <article key={card.id} style={styles.hypeCard} className="hype-card">
+                <article 
+                  key={card.id} 
+                  style={styles.hypeCard} 
+                  className="hype-card"
+                  onClick={() => setSelectedCard(card)}
+                >
                   <div style={styles.rankBadge}>#{index + 1}</div>
                   <div style={styles.cardImageWrapper}>
                     <img
@@ -183,6 +429,9 @@ export default function Home() {
                       style={styles.cardImage}
                       onError={(e) => { e.target.src = "https://via.placeholder.com/200x280/f5f5f5/999?text=Card"; }}
                     />
+                    <div style={styles.cardOverlay}>
+                      <span style={styles.viewDetail}>View Details</span>
+                    </div>
                   </div>
                   <div style={styles.cardInfo}>
                     <div style={styles.cardHeader}>
@@ -202,14 +451,6 @@ export default function Home() {
                         <span style={styles.priceValue}>${card.price}</span>
                       </div>
                     )}
-                    <p style={styles.cardReason}>{card.reason}</p>
-                    <div style={styles.sourceLinks}>
-                      {card.sources?.map((src, i) => (
-                        <a key={i} href={src.url} style={styles.sourceLink} className="source-link" target="_blank" rel="noopener noreferrer">
-                          {src.name}
-                        </a>
-                      ))}
-                    </div>
                   </div>
                 </article>
               );
@@ -266,9 +507,394 @@ export default function Home() {
         <p style={styles.footerText}>Data: pokemontcg.io, TCGPlayer, CardMarket</p>
         <p style={styles.footerSubtext}>Real-time updates · Built with 💜 by CultureCode</p>
       </footer>
+
+      {/* Card Detail Modal */}
+      {selectedCard && (
+        <CardDetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />
+      )}
+
+      {/* Sign Up Modal */}
+      {showSignUp && (
+        <SignUpModal 
+          onClose={() => {
+            setShowSignUp(false);
+            setPendingNotifyId(null);
+          }} 
+          onSuccess={handleSignUpSuccess} 
+        />
+      )}
     </div>
   );
 }
+
+// Modal Styles
+const modalStyles = {
+  overlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+    padding: "20px",
+  },
+  container: {
+    backgroundColor: "#fff",
+    borderRadius: "16px",
+    maxWidth: "900px",
+    width: "100%",
+    maxHeight: "90vh",
+    overflow: "auto",
+    position: "relative",
+    animation: "fadeInUp 0.3s ease-out",
+  },
+  closeButton: {
+    position: "absolute",
+    top: "16px",
+    right: "16px",
+    width: "36px",
+    height: "36px",
+    borderRadius: "50%",
+    border: "none",
+    backgroundColor: "#f5f5f5",
+    fontSize: "24px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#666",
+    zIndex: 10,
+  },
+  content: {
+    display: "flex",
+    gap: "32px",
+    padding: "32px",
+    flexWrap: "wrap",
+  },
+  imageSection: {
+    flex: "0 0 280px",
+    display: "flex",
+    justifyContent: "center",
+  },
+  cardImage: {
+    width: "100%",
+    maxWidth: "280px",
+    borderRadius: "12px",
+    boxShadow: "0 8px 30px rgba(0, 0, 0, 0.15)",
+  },
+  infoSection: {
+    flex: 1,
+    minWidth: "280px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "20px",
+  },
+  header: {
+    borderBottom: "1px solid #eaeaea",
+    paddingBottom: "16px",
+  },
+  cardName: {
+    fontSize: "24px",
+    fontWeight: "700",
+    margin: "0 0 4px 0",
+    color: "#1a1a1a",
+  },
+  setName: {
+    fontSize: "14px",
+    color: "#666",
+    margin: "0 0 8px 0",
+  },
+  rarity: {
+    fontSize: "12px",
+    fontWeight: "600",
+    padding: "4px 10px",
+    backgroundColor: "#f5f5f5",
+    borderRadius: "4px",
+    color: "#555",
+  },
+  hypeSection: {
+    padding: "16px",
+    backgroundColor: "#fafafa",
+    borderRadius: "12px",
+  },
+  hypeTitle: {
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "#888",
+    marginBottom: "8px",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  },
+  hypeScoreContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  },
+  hypeScoreBig: {
+    fontSize: "32px",
+    fontWeight: "700",
+    fontFamily: "'Space Mono', monospace",
+    padding: "8px 16px",
+    borderRadius: "8px",
+  },
+  hypeLabel: {
+    fontSize: "16px",
+    fontWeight: "600",
+  },
+  priceSection: {
+    padding: "16px",
+    backgroundColor: "#f0fdf4",
+    borderRadius: "12px",
+  },
+  priceTitle: {
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "#888",
+    marginBottom: "8px",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  },
+  priceRow: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: "12px",
+  },
+  priceValue: {
+    fontSize: "28px",
+    fontWeight: "700",
+    fontFamily: "'Space Mono', monospace",
+    color: "#1a1a1a",
+  },
+  priceChange: {
+    fontSize: "16px",
+    fontWeight: "600",
+    color: "#16a34a",
+  },
+  priceSubtext: {
+    fontSize: "12px",
+    color: "#888",
+    marginTop: "4px",
+  },
+  reasonSection: {
+    padding: "16px",
+    backgroundColor: "#fafafa",
+    borderRadius: "12px",
+  },
+  reasonTitle: {
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#1a1a1a",
+    marginBottom: "8px",
+  },
+  reasonText: {
+    fontSize: "14px",
+    color: "#555",
+    lineHeight: "1.6",
+    margin: 0,
+  },
+  sourcesSection: {
+    marginTop: "auto",
+  },
+  sourcesTitle: {
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "#888",
+    marginBottom: "8px",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  },
+  sourcesList: {
+    display: "flex",
+    gap: "8px",
+    flexWrap: "wrap",
+  },
+  sourceLink: {
+    fontSize: "13px",
+    color: "#555",
+    textDecoration: "none",
+    padding: "6px 12px",
+    backgroundColor: "#f5f5f5",
+    borderRadius: "6px",
+    transition: "background-color 0.2s",
+  },
+  actions: {
+    display: "flex",
+    gap: "12px",
+    marginTop: "8px",
+    flexWrap: "wrap",
+  },
+  buyButton: {
+    flex: 1,
+    minWidth: "140px",
+    padding: "14px 24px",
+    fontSize: "14px",
+    fontWeight: "600",
+    backgroundColor: "#1a1a1a",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    textDecoration: "none",
+    textAlign: "center",
+    transition: "background-color 0.2s",
+  },
+  secondaryButton: {
+    flex: 1,
+    minWidth: "140px",
+    padding: "14px 24px",
+    fontSize: "14px",
+    fontWeight: "600",
+    backgroundColor: "#fff",
+    color: "#1a1a1a",
+    border: "1px solid #e5e5e5",
+    borderRadius: "8px",
+    cursor: "pointer",
+    textDecoration: "none",
+    textAlign: "center",
+    transition: "background-color 0.2s",
+  },
+};
+
+// Auth Modal Styles
+const authStyles = {
+  overlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+    padding: "20px",
+  },
+  container: {
+    backgroundColor: "#fff",
+    borderRadius: "16px",
+    maxWidth: "420px",
+    width: "100%",
+    position: "relative",
+    animation: "fadeInUp 0.3s ease-out",
+  },
+  closeButton: {
+    position: "absolute",
+    top: "16px",
+    right: "16px",
+    width: "36px",
+    height: "36px",
+    borderRadius: "50%",
+    border: "none",
+    backgroundColor: "#f5f5f5",
+    fontSize: "24px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#666",
+  },
+  content: {
+    padding: "40px 32px",
+    textAlign: "center",
+  },
+  logoSection: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    marginBottom: "24px",
+  },
+  logoIcon: {
+    fontSize: "24px",
+    fontFamily: "'Space Mono', monospace",
+  },
+  logoText: {
+    fontSize: "18px",
+    fontWeight: "700",
+    margin: 0,
+  },
+  titleSection: {
+    marginBottom: "24px",
+  },
+  title: {
+    fontSize: "24px",
+    fontWeight: "700",
+    margin: "0 0 8px 0",
+    color: "#1a1a1a",
+  },
+  subtitle: {
+    fontSize: "14px",
+    color: "#666",
+    margin: 0,
+    lineHeight: "1.5",
+  },
+  benefits: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+    marginBottom: "28px",
+    padding: "16px",
+    backgroundColor: "#fafafa",
+    borderRadius: "12px",
+  },
+  benefitItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    textAlign: "left",
+  },
+  benefitIcon: {
+    fontSize: "16px",
+  },
+  benefitText: {
+    fontSize: "13px",
+    color: "#555",
+  },
+  xButton: {
+    width: "100%",
+    padding: "14px 24px",
+    fontSize: "15px",
+    fontWeight: "600",
+    backgroundColor: "#000",
+    color: "#fff",
+    border: "none",
+    borderRadius: "50px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "10px",
+    transition: "background-color 0.2s",
+    marginBottom: "16px",
+  },
+  xLogo: {
+    width: "18px",
+    height: "18px",
+  },
+  loadingSpinner: {
+    width: "20px",
+    height: "20px",
+    border: "2px solid rgba(255,255,255,0.3)",
+    borderTopColor: "#fff",
+    borderRadius: "50%",
+    animation: "spin 0.8s linear infinite",
+  },
+  terms: {
+    fontSize: "11px",
+    color: "#888",
+    margin: 0,
+    lineHeight: "1.5",
+  },
+  termsLink: {
+    color: "#555",
+    textDecoration: "underline",
+  },
+};
 
 const styles = {
   container: {
@@ -309,6 +935,30 @@ const styles = {
   logoIcon: { fontSize: "28px", fontFamily: "'Space Mono', monospace", color: "#1a1a1a" },
   logo: { fontSize: "20px", fontWeight: "700", margin: 0, letterSpacing: "-0.5px" },
   tagline: { fontSize: "12px", color: "#888", margin: 0, letterSpacing: "2px", textTransform: "uppercase" },
+  headerRight: { display: "flex", alignItems: "center", gap: "12px" },
+  userSection: { display: "flex", alignItems: "center", gap: "8px" },
+  userAvatar: { width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover" },
+  userName: { fontSize: "13px", fontWeight: "500", color: "#555" },
+  logoutButton: {
+    padding: "6px 12px",
+    fontSize: "12px",
+    fontWeight: "500",
+    backgroundColor: "transparent",
+    color: "#888",
+    border: "1px solid #e5e5e5",
+    borderRadius: "6px",
+    cursor: "pointer",
+  },
+  signInButton: {
+    padding: "8px 16px",
+    fontSize: "13px",
+    fontWeight: "600",
+    backgroundColor: "#1a1a1a",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+  },
   liveIndicator: {
     display: "flex",
     alignItems: "center",
@@ -398,11 +1048,15 @@ const styles = {
   },
   tabButtonActive: { color: "#1a1a1a", borderBottomColor: "#1a1a1a" },
   tabIcon: { fontSize: "16px" },
-  content: { padding: "24px", maxWidth: "1200px", margin: "0 auto" },
-  hypeGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "16px" },
+  content: { padding: "24px", maxWidth: "900px", margin: "0 auto" },
+  hypeGrid: { 
+    display: "grid", 
+    gridTemplateColumns: "repeat(2, 1fr)", 
+    gap: "16px",
+  },
   hypeCard: {
     display: "flex",
-    gap: "16px",
+    flexDirection: "column",
     padding: "16px",
     backgroundColor: "#fff",
     borderRadius: "12px",
@@ -410,6 +1064,7 @@ const styles = {
     position: "relative",
     animation: "fadeInUp 0.4s ease-out both",
     transition: "transform 0.2s, box-shadow 0.2s",
+    cursor: "pointer",
   },
   rankBadge: {
     position: "absolute",
@@ -424,24 +1079,49 @@ const styles = {
     zIndex: 1,
   },
   cardImageWrapper: {
-    flexShrink: 0,
-    width: "100px",
-    height: "140px",
+    width: "100%",
+    aspectRatio: "3/4",
     borderRadius: "8px",
     overflow: "hidden",
     backgroundColor: "#f5f5f5",
+    marginBottom: "12px",
+    position: "relative",
   },
   cardImage: { width: "100%", height: "100%", objectFit: "cover" },
-  cardInfo: { flex: 1, display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 },
+  cardOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: 0,
+    transition: "opacity 0.2s",
+  },
+  viewDetail: {
+    color: "#fff",
+    fontSize: "14px",
+    fontWeight: "600",
+    padding: "10px 20px",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: "8px",
+    backdropFilter: "blur(4px)",
+  },
+  cardInfo: { display: "flex", flexDirection: "column", gap: "8px" },
   cardHeader: { marginBottom: "4px" },
   cardName: {
-    fontSize: "15px",
+    fontSize: "14px",
     fontWeight: "600",
     margin: 0,
     color: "#1a1a1a",
-    whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
   },
   cardSet: { fontSize: "12px", color: "#888" },
   hypeRow: { display: "flex", alignItems: "center", gap: "10px" },
@@ -460,17 +1140,6 @@ const styles = {
   priceInfo: { display: "flex", alignItems: "center", gap: "6px" },
   priceLabel: { fontSize: "11px", color: "#888" },
   priceValue: { fontSize: "14px", fontWeight: "600", color: "#1a1a1a", fontFamily: "'Space Mono', monospace" },
-  cardReason: { fontSize: "13px", color: "#555", lineHeight: "1.5", margin: 0 },
-  sourceLinks: { display: "flex", gap: "8px", marginTop: "auto", flexWrap: "wrap" },
-  sourceLink: {
-    fontSize: "11px",
-    color: "#888",
-    textDecoration: "none",
-    padding: "2px 8px",
-    backgroundColor: "#f5f5f5",
-    borderRadius: "4px",
-    transition: "background-color 0.2s",
-  },
   dropsList: { display: "flex", flexDirection: "column", gap: "12px" },
   dropCard: {
     display: "flex",
